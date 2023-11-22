@@ -20,7 +20,7 @@ void send_Basic()
 {
   Serial.println("send_Basic");
   packInfoStruct basic_info = {0};
-  headerInfoStruct basic_info_header = {0};
+  headerInfoStruct basic_info_header = {0,0,0,0,0};;
 
   int i = 0, j = 0; //k = 0;
   uint8_t basic_index = 5;
@@ -72,8 +72,8 @@ void send_Basic()
   Serial.println("*************************");
 
   basic_info_header.start = 0x55;
-  basic_info_header.srcID = 0x11;
-  basic_info_header.snkID = 0x22;
+  basic_info_header.srcID = 0x22;
+  basic_info_header.snkID = 0x11;
   basic_info_header.cmd = BASIC_INFO;
   basic_info_header.length = basic_data_len;
 
@@ -97,7 +97,7 @@ void cell_info()
 {
   Serial.println("cell info");
   packInfoStruct cell_info;
-  headerInfoStruct cell_info_header = {0};
+  headerInfoStruct cell_info_header = {0,0,0,0,0};;
 
   int i = 0, j = 0, k = 0;
   uint8_t cell_info_index = 5;
@@ -135,8 +135,8 @@ void cell_info()
   Serial.println("*************************");
 
   cell_info_header.start = 0x55;
-  cell_info_header.srcID = 0x11;
-  cell_info_header.snkID = 0x22;
+  cell_info_header.srcID = 0x22;
+  cell_info_header.snkID = 0x11;
   cell_info_header.cmd = CELL_INFO;
   cell_info_header.length = cell_buff_len;
 
@@ -159,7 +159,7 @@ void cell_balance()
 {
   Serial.println("cell_balance");
   packInfoStruct cell_balance;
-  headerInfoStruct cell_balance_header = {0};
+  headerInfoStruct cell_balance_header = {0,0,0,0,0};;
 
   int i = 0, j = 0; //k = 0;
   uint8_t cell_balance_index = 5;
@@ -184,8 +184,8 @@ void cell_balance()
   Serial.println("************");
 
   cell_balance_header.start = 0x55;
-  cell_balance_header.srcID = 0x11;
-  cell_balance_header.snkID = 0x22;
+  cell_balance_header.srcID = 0x22;
+  cell_balance_header.snkID = 0x11;
   cell_balance_header.cmd = CELL_BALANCE;
   cell_balance_header.length = balance_buff_len;
 
@@ -208,7 +208,7 @@ void ctrl_status()
 {
   Serial.println("ctrl_status");
   packInfoStruct ctrl_status;
-  headerInfoStruct ctrl_status_header = {0};
+  headerInfoStruct ctrl_status_header = {0,0,0,0,0};;
 
   int i = 0, j = 0; // k = 0;
   uint8_t ctrl_status_index = 5;
@@ -233,8 +233,8 @@ void ctrl_status()
   Serial.println("************");
 
   ctrl_status_header.start = 0x55;
-  ctrl_status_header.srcID = 0x11;
-  ctrl_status_header.snkID = 0x22;
+  ctrl_status_header.srcID = 0x22;
+  ctrl_status_header.snkID = 0x11;
   ctrl_status_header.cmd = CTRL_STATUS;
   ctrl_status_header.length = status_buff_len;
 
@@ -258,7 +258,7 @@ void utilitu_segment()
 {
   Serial.println("ctrl_status");
   packInfoStruct utility_seg;
-  headerInfoStruct utility_seg_header = {0};
+  headerInfoStruct utility_seg_header = {0,0,0,0,0};;
 
   int i = 0, j = 0, k = 0;
   int utility_seg_index = 5;
@@ -308,8 +308,8 @@ for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[
   Serial.println("************");
 
   utility_seg_header.start = 0x55;
-  utility_seg_header.srcID = 0x11;
-  utility_seg_header.snkID = 0x22;
+  utility_seg_header.srcID = 0x22;
+  utility_seg_header.snkID = 0x11;
   utility_seg_header.cmd = UTILITY;
   utility_seg_header.length = utility_buff_len;
 
