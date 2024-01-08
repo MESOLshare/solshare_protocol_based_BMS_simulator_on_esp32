@@ -259,46 +259,73 @@ void cell_balance()
 {
   Serial.println("cell_balance");
   packInfoStruct cell_balance;
-  headerInfoStruct cell_balance_header = {0,0,0,0};;
+  headerInfoStruct cell_balance_header = {0,0,0,0};
+  OnlyheaderStruct headerStart = {0};
 
   int i = 0, j = 0; //k = 0;
-  uint8_t cell_balance_index = 5;
+  uint8_t cell_balance_index_crc = 4;
+  uint8_t cell_balance_index = 0;
   int balance_buff_len = 11;
+  uint8_t balance_buff_crc[balance_buff_len];
   uint8_t balance_buff[balance_buff_len];
+  uint8_t crc_cell_balance = 0;
+
+  headerStart.start = START;
+  cell_balance_header.srcID = 0x22;
+  cell_balance_header.snkID = 0x11;
+  cell_balance_header.cmd = CELL_BALANCE;
+  cell_balance_header.length = 4;
 
   cell_balance.cellString_1 = 0b11111111; 
   cell_balance.cellString_2 = 0b11111111; 
   cell_balance.cellString_3 = 0b00001111; 
   cell_balance.cellString_4 = 0b00000011; 
 
+  balance_buff_crc[cell_balance_index_crc++] = cell_balance.cellString_1 & 0xFF;
+  balance_buff_crc[cell_balance_index_crc++] = cell_balance.cellString_2 & 0xFF;
+  balance_buff_crc[cell_balance_index_crc++] = cell_balance.cellString_3 & 0xFF;
+  balance_buff_crc[cell_balance_index_crc++] = cell_balance.cellString_4 & 0xFF;
+
+  memcpy(balance_buff_crc, &cell_balance_header, 4);
+
+  crc_cell_balance = calculateCRC_8(balance_buff_crc, 8);
+
+  Serial.println("******raw*******");
+  for (i = 0 ; i < 8 ; i++)
+  { 
+    Serial.print("0x");
+    Serial.print(balance_buff_crc[i], HEX);
+    Serial.print(", ");
+  }
+  Serial.println("");
+  Serial.println("************");
+
+  Serial.println("** CRC **: ");
+  Serial.println(crc_cell_balance, HEX);
+  /*------------------------------------------------------------------*/
+
+  balance_buff[cell_balance_index++] = headerStart.start;
+  balance_buff[cell_balance_index++] = cell_balance_header.srcID;
+  balance_buff[cell_balance_index++] = cell_balance_header.snkID;
+  balance_buff[cell_balance_index++] = cell_balance_header.cmd;
+  balance_buff[cell_balance_index++] = cell_balance_header.length;
+
   balance_buff[cell_balance_index++] = cell_balance.cellString_1 & 0xFF;
   balance_buff[cell_balance_index++] = cell_balance.cellString_2 & 0xFF;
   balance_buff[cell_balance_index++] = cell_balance.cellString_3 & 0xFF;
   balance_buff[cell_balance_index++] = cell_balance.cellString_4 & 0xFF;
 
-  Serial.println("******data*******");
-  for (i = 5 ; i <= 8 ; i++)
-  {
-    Serial.println(balance_buff[i], HEX);
-  }
-  Serial.println("************");
-
-  // cell_balance_header.start = 0x55;
-  cell_balance_header.srcID = 0x22;
-  cell_balance_header.snkID = 0x11;
-  cell_balance_header.cmd = CELL_BALANCE;
-  cell_balance_header.length = balance_buff_len;
-
-  memcpy(balance_buff, &cell_balance_header, 5);
-
-  balance_buff[cell_balance_index++] = calculateCRC(balance_buff, sizeof(balance_buff));
+  balance_buff[cell_balance_index++] = crc_cell_balance;
   balance_buff[cell_balance_index++] = END;
 
-  Serial.println("*******ALL******");
-  for (j = 0 ; j < balance_buff_len  ; j++)
-  {
-    Serial.println(balance_buff[j], HEX);
+  Serial.println("******ALL*******");
+  for (i = 0 ; i < 11 ; i++)
+  { 
+    Serial.print("0x");
+    Serial.print(balance_buff[i], HEX);
+    Serial.print(", ");
   }
+  Serial.println("");
   Serial.println("************");
 
   Serial2.write(balance_buff, balance_buff_len);
