@@ -1,4 +1,5 @@
 //CRC table
+
 const unsigned char crctable[256] = {0x00, 0x91, 0xE3, 0x72, 0x07, 0x96,
                                      0xE4, 0x75, 0x0E, 0x9F, 0xED, 0x7C, 0x09, 0x98, 0xEA, 0x7B, 0x1C,
                                      0x8D, 0xFF, 0x6E, 0x1B, 0x8A, 0xF8, 0x69, 0x12, 0x83, 0xF1, 0x60,
@@ -24,7 +25,6 @@ const unsigned char crctable[256] = {0x00, 0x91, 0xE3, 0x72, 0x07, 0x96,
                                      0x30, 0x42, 0xD3, 0xB4, 0x25, 0x57, 0xC6, 0xB3, 0x22, 0x50, 0xC1,
                                      0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF};
 
-
 unsigned char make_crc(const unsigned char *input, int count)
 {
     unsigned char fcs = 0xFF;
@@ -47,6 +47,23 @@ uint8_t calculateCRC(uint8_t* pxBuff, int u8BuffLen)
     printf("Calculated CRC: 0x%02X\r\n", crc);
 
     return crc;    
+}
+
+uint8_t calculateCRC_8(uint8_t *data, size_t len)
+{
+    uint8_t crc = 0;
+    size_t i, j;
+    uint8_t generator = 0x07; 
+    for (i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (j = 0; j < 8; j++) {
+            if ((crc & 0x80) != 0)
+                crc = (uint8_t)((crc << 1) ^ generator);
+            else
+                crc <<= 1;
+        }
+    }
+    return crc;
 }
 
 void crc_return()

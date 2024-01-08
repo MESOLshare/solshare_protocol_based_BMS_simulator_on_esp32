@@ -6,27 +6,46 @@
 void result_packet(uint8_t cmd, int data)
 {
   Serial.println("result_packet");
-  // packInfoStruct basic_info = {0};
-  headerInfoStruct header = {0,0,0,0,0};
+  headerInfoStruct header = {0,0,0,0};
+  OnlyheaderStruct headerStart = {0};
 
   int j = 0; //k = 0;
-  uint8_t index = 5;
+  uint8_t index_crc = 4;
+  uint8_t index = 0;
   int data_len = 8;
+  uint8_t buff_crc[data_len];
   uint8_t buff[data_len];
 
   int result = data;
+  Serial.print("************result*************: ");
+  Serial.println(result);
 
-  buff[index++] = result;
-
-  header.start = 0x55;
+  headerStart.start = START;
   header.srcID = 0x22;
   header.snkID = 0x11;
   header.cmd = cmd;
   header.length = 1;
 
-  memcpy(buff, &header, 5);
+  buff_crc[index_crc++] = result;
 
-  buff[index++] = calculateCRC(buff, sizeof(buff));
+  memcpy(buff_crc, &header, 4);
+  
+  Serial.println("************before crc*************");
+  for (j = 0; j < 5; j++)
+  {
+    Serial.println(buff_crc[j], HEX);
+  }
+  Serial.println("*************************");
+
+  buff_crc[index_crc++] = calculateCRC_8(buff_crc, 5);
+
+  buff[index++] = headerStart.start;
+  buff[index++] = header.srcID;
+  buff[index++] = header.snkID;
+  buff[index++] = header.cmd;
+  buff[index++] = header.length;
+  buff[index++] = result;
+  buff[index++] = calculateCRC_8(buff_crc, 5);
   buff[index++] = END;
 
   Serial.println("************gen ALL*************");
@@ -43,7 +62,6 @@ void result_packet(uint8_t cmd, int data)
 void mosCtrl()
 {
   Serial.println("mosCtrl");
-
   int response_data = 0x00;
   result_packet(MOS_CTRL, response_data);
 }

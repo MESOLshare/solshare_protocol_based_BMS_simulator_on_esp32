@@ -20,12 +20,23 @@ void send_Basic()
 {
   Serial.println("send_Basic");
   packInfoStruct basic_info = {0};
-  headerInfoStruct basic_info_header = {0,0,0,0,0};;
+  headerInfoStruct basic_info_header = {0,0,0,0};
+  OnlyheaderStruct headerStart = {0};
 
   int i = 0, j = 0; //k = 0;
-  uint8_t basic_index = 5;
+  uint8_t basic_index_crc = 4;
+  uint8_t basic_index = 0;
   int basic_data_len = 27;
+  uint8_t basic_buff_crc[basic_data_len];
   uint8_t basic_buff[basic_data_len];
+  uint8_t crc8_basic_info;
+
+  // basic_info_header.start = 0x55;
+  headerStart.start = START;
+  basic_info_header.srcID = 0x22;
+  basic_info_header.snkID = 0x11;
+  basic_info_header.cmd = BASIC_INFO;
+  basic_info_header.length = 20;
 
   basic_info.tVoltage = 55555;
   float ieee754Value = -5.0;
@@ -36,6 +47,58 @@ void send_Basic()
   basic_info.remCapacity  = (basic_info.SOC * basic_info.nCapacity) / 100;
   basic_info.maxTemp = 120;
   basic_info.error_Codes = 2;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.tVoltage >> 24) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.tVoltage >> 16) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.tVoltage >> 8) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.tVoltage >> 0) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.RTCurrent >> 24) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.RTCurrent >> 16) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.RTCurrent >> 8) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.RTCurrent >> 0) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.nCapacity >> 24) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.nCapacity >> 16) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.nCapacity >> 8) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.nCapacity >> 0) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.remCapacity >> 24) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.remCapacity >> 16) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.remCapacity >> 8) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.remCapacity >> 0) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.SOC) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.maxTemp >> 8) & 0xFF;
+  basic_buff_crc[basic_index_crc++] = (basic_info.maxTemp >> 0) & 0xFF;
+
+  basic_buff_crc[basic_index_crc++] = (basic_info.error_Codes) & 0xFF;
+
+  memcpy(basic_buff_crc, &basic_info_header, 4);
+
+  crc8_basic_info = calculateCRC_8(basic_buff_crc, 24);
+
+  Serial.println("*************RAW************");
+  for (i = 0; i < 24; i++)
+  {  
+    Serial.print("0x");
+    Serial.print(basic_buff_crc[i], HEX);
+    Serial.print(", ");
+  }
+  Serial.println("");
+  Serial.println("*************************");
+
+  Serial.print("** CRC **: ");
+  Serial.println(crc8_basic_info, HEX);
+
+  /*--------------------*/
+
+  basic_buff[basic_index++] = headerStart.start;
+  basic_buff[basic_index++] = basic_info_header.srcID;
+  basic_buff[basic_index++] = basic_info_header.snkID;
+  basic_buff[basic_index++] = basic_info_header.cmd;
+  basic_buff[basic_index++] = basic_info_header.length;
 
   basic_buff[basic_index++] = (basic_info.tVoltage >> 24) & 0xFF;
   basic_buff[basic_index++] = (basic_info.tVoltage >> 16) & 0xFF;
@@ -64,29 +127,17 @@ void send_Basic()
 
   basic_buff[basic_index++] = (basic_info.error_Codes) & 0xFF;
 
-  Serial.println("*************RAW************");
-  for (i = 5; i < 25; i++)
-  {
-    Serial.println(basic_buff[i], HEX);
-  }
-  Serial.println("*************************");
-
-  basic_info_header.start = 0x55;
-  basic_info_header.srcID = 0x22;
-  basic_info_header.snkID = 0x11;
-  basic_info_header.cmd = BASIC_INFO;
-  basic_info_header.length = basic_data_len;
-
-  memcpy(basic_buff, &basic_info_header, 5);
-
-  basic_buff[basic_index++] = calculateCRC(basic_buff, sizeof(basic_buff));
+  basic_buff[basic_index++] = crc8_basic_info;
   basic_buff[basic_index++] = END;
 
   Serial.println("************ALL*************");
   for (j = 0; j < basic_data_len; j++)
   {
-    Serial.println(basic_buff[j], HEX);
+    Serial.print("0x");
+    Serial.print(basic_buff[j], HEX);
+    Serial.print(", ");
   }
+  Serial.println("");
   Serial.println("*************************");
 
   Serial2.write(basic_buff, basic_data_len);
@@ -97,17 +148,71 @@ void cell_info()
 {
   Serial.println("cell info");
   packInfoStruct cell_info;
-  headerInfoStruct cell_info_header = {0,0,0,0,0};;
+  headerInfoStruct cell_info_header = {0,0,0,0};;
+  OnlyheaderStruct headerStart = {0};
+  uint8_t crc8_cell_info;
 
   int i = 0, j = 0, k = 0;
-  uint8_t cell_info_index = 5;
+  uint8_t cell_info_index_crc = 4;
+  uint8_t cell_info_index = 0;
   int cell_buff_len = 54;
+  int cell_buff_data_len = 47;
+  uint8_t cell_buff_crc[cell_buff_len];
   uint8_t cell_buff[cell_buff_len];
+
+  headerStart.start = START;
+  cell_info_header.srcID = 0x22;
+  cell_info_header.snkID = 0x11;
+  cell_info_header.cmd = CELL_INFO;
+  cell_info_header.length = cell_buff_data_len;
 
   cell_info.numOfCells = 20;
   cell_info.cellHigh   = 4200;
   cell_info.cellLow    = 2700;
   cell_info.cellAvg    = 3500;
+
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.numOfCells >> 0) & 0xFF;
+
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellHigh >> 8) & 0xFF;
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellHigh >> 0) & 0xFF;
+
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellLow >> 8) & 0xFF;
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellLow >> 0) & 0xFF;
+
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellAvg >> 8) & 0xFF;
+  cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellAvg >> 0) & 0xFF;
+
+  for (i = 0 ; i < cell_info.numOfCells ; i++)
+  {
+    cell_info.cellVoltage[i] = 3700;
+    cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellVoltage[i] >> 8) & 0xFF;
+    cell_buff_crc[cell_info_index_crc ++] = (cell_info.cellVoltage[i] >> 0) & 0xFF;
+  }
+
+  memcpy(cell_buff_crc, &cell_info_header, 5);
+
+  Serial.println("*************RAW************");
+  for (j = 0; j < 47; j++)
+  {
+    Serial.print("0x");
+    Serial.print(cell_buff_crc[j], HEX);
+    Serial.print(", ");
+  }
+  Serial.print("");
+  Serial.println("*************************");
+
+  crc8_cell_info = calculateCRC_8(cell_buff_crc, 47);
+
+  Serial.print("** CRC **: ");
+  Serial.println(crc8_cell_info, HEX);
+
+  /*---------------------------------------------------------------*/
+
+  cell_buff[cell_info_index ++] = headerStart.start;
+  cell_buff[cell_info_index ++] = cell_info_header.srcID;
+  cell_buff[cell_info_index ++] = cell_info_header.snkID;
+  cell_buff[cell_info_index ++] = cell_info_header.cmd;
+  cell_buff[cell_info_index ++] = cell_info_header.length;
 
   cell_buff[cell_info_index ++] = (cell_info.numOfCells >> 0) & 0xFF;
 
@@ -127,29 +232,24 @@ void cell_info()
     cell_buff[cell_info_index ++] = (cell_info.cellVoltage[i] >> 0) & 0xFF;
   }
 
-  Serial.println("*************RAW************");
-  for (j = 5; j < 52; j++)
-  {
-    Serial.println(cell_buff[j], HEX);
-  }
-  Serial.println("*************************");
+  // Serial.println("*************RAW************");
+  // for (j = 5; j < 52; j++)
+  // {
+  //   Serial.println(cell_buff[j], HEX);
+  // }
+  // Serial.println("*************************");
 
-  cell_info_header.start = 0x55;
-  cell_info_header.srcID = 0x22;
-  cell_info_header.snkID = 0x11;
-  cell_info_header.cmd = CELL_INFO;
-  cell_info_header.length = cell_buff_len;
-
-  memcpy(cell_buff, &cell_info_header, 5);
-
-  cell_buff[cell_info_index++] = calculateCRC(cell_buff, sizeof(cell_buff)); 
+  cell_buff[cell_info_index++] = crc8_cell_info;
   cell_buff[cell_info_index++] = END;
 
-  Serial.println("************ALL*************");
-  for (k = 0; k < cell_buff_len; k++)
+  Serial.println("*************ALL************");
+  for (j = 0; j < 47; j++)
   {
-    Serial.println(cell_buff[k], HEX);
+    Serial.print("0x");
+    Serial.print(cell_buff[j], HEX);
+    Serial.print(", ");
   }
+  Serial.print("");
   Serial.println("*************************");
   
   Serial2.write(cell_buff, cell_buff_len);
@@ -159,7 +259,7 @@ void cell_balance()
 {
   Serial.println("cell_balance");
   packInfoStruct cell_balance;
-  headerInfoStruct cell_balance_header = {0,0,0,0,0};;
+  headerInfoStruct cell_balance_header = {0,0,0,0};;
 
   int i = 0, j = 0; //k = 0;
   uint8_t cell_balance_index = 5;
@@ -183,7 +283,7 @@ void cell_balance()
   }
   Serial.println("************");
 
-  cell_balance_header.start = 0x55;
+  // cell_balance_header.start = 0x55;
   cell_balance_header.srcID = 0x22;
   cell_balance_header.snkID = 0x11;
   cell_balance_header.cmd = CELL_BALANCE;
@@ -208,7 +308,7 @@ void ctrl_status()
 {
   Serial.println("ctrl_status");
   packInfoStruct ctrl_status;
-  headerInfoStruct ctrl_status_header = {0,0,0,0,0};;
+  headerInfoStruct ctrl_status_header = {0,0,0,0};;
 
   int i = 0, j = 0; // k = 0;
   uint8_t ctrl_status_index = 5;
@@ -232,7 +332,7 @@ void ctrl_status()
   }
   Serial.println("************");
 
-  ctrl_status_header.start = 0x55;
+  // ctrl_status_header.start = 0x55;
   ctrl_status_header.srcID = 0x22;
   ctrl_status_header.snkID = 0x11;
   ctrl_status_header.cmd = CTRL_STATUS;
@@ -258,7 +358,7 @@ void utilitu_segment()
 {
   Serial.println("ctrl_status");
   packInfoStruct utility_seg;
-  headerInfoStruct utility_seg_header = {0,0,0,0,0};;
+  headerInfoStruct utility_seg_header = {0,0,0,0};;
 
   int i = 0, j = 0, k = 0;
   int utility_seg_index = 5;
@@ -307,7 +407,7 @@ for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[
   }
   Serial.println("************");
 
-  utility_seg_header.start = 0x55;
+  // utility_seg_header.start = 0x55;
   utility_seg_header.srcID = 0x22;
   utility_seg_header.snkID = 0x11;
   utility_seg_header.cmd = UTILITY;

@@ -13,7 +13,7 @@ UART voltage:		12V
 #define END 0xAA
 
 // read info
-#define LEN_READ 12 // max 12
+#define LEN_READ 9 // max 12
 #define BASIC_INFO    0xA1
 #define CELL_INFO     0xA2
 #define CELL_BALANCE  0xA3
@@ -104,12 +104,21 @@ typedef struct packInfoStruct{
 } packInfoStruct;
 
 typedef struct headerInfoStruct{
-  uint8_t start ;
+  // uint8_t start ;
   uint8_t srcID ;
   uint8_t snkID ;
   uint8_t cmd;
   uint8_t length;
 } headerInfoStruct;
+
+typedef struct OnlyheaderStruct{
+  uint8_t start ;
+  // uint8_t srcID ;
+  // uint8_t snkID ;
+  // uint8_t cmd;
+  // uint8_t length;
+} OnlyheaderStruct;
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -145,8 +154,35 @@ uint8_t rand_SOC()
   return testSoc;
 }
 
+/*
+write start:
+DD 5A 00 02 56 78 FF 30 77
+
+basic info:
+DD A5 03 00 FF FD 77 
+
+cell info:
+DD A5 04 00 FF FC 77 
+
+write start/stop reply:
+{0xDD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x77};
+
+pxCmd_dischargeStart:
+0xDD, 0x5A, 0xE1, 0x02, 0x00, 0x00, 0xFF, 0x1D, 0x77
+
+pxCmd_dischargeStop:
+0xDD, 0x5A, 0xE1, 0x02, 0x00, 0x02, 0xFF, 0x1B, 0x77
+
+pxRes_dischargeStart/stop reply:
+0xDD, 0xE1, 0x00, 0x00, 0x00, 0x00, 0x77
+*/
+
 void loop() {
   // put your main code here, to run repeatedly:
+
+  cell_info();
+  delay(5000);
+
 
   uint8_t responce[LEN_READ];
   if (get_bytes(responce)) 
@@ -237,4 +273,5 @@ void loop() {
         if (responce[5] == DSCRG_UTPRD)   {dscrg_UTPRD();}
     }
   }
+  
 }
