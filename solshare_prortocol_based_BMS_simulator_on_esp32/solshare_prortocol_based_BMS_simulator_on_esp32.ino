@@ -180,9 +180,6 @@ pxRes_dischargeStart/stop reply:
 void loop() {
   // put your main code here, to run repeatedly:
 
-  cell_balance();
-  delay(5000);
-
 
   uint8_t responce[LEN_READ];
   if (get_bytes(responce)) 

@@ -26,9 +26,10 @@ void send_Basic()
   int i = 0, j = 0; //k = 0;
   uint8_t basic_index_crc = 4;
   uint8_t basic_index = 0;
-  int basic_data_len = 27;
-  uint8_t basic_buff_crc[basic_data_len];
-  uint8_t basic_buff[basic_data_len];
+  int basic_data_len = 20;
+  int basic_buff_len = 27;
+  uint8_t basic_buff_crc[basic_buff_len];
+  uint8_t basic_buff[basic_buff_len];
   uint8_t crc8_basic_info;
 
   // basic_info_header.start = 0x55;
@@ -36,7 +37,7 @@ void send_Basic()
   basic_info_header.srcID = 0x22;
   basic_info_header.snkID = 0x11;
   basic_info_header.cmd = BASIC_INFO;
-  basic_info_header.length = 20;
+  basic_info_header.length = basic_data_len;
 
   basic_info.tVoltage = 55555;
   float ieee754Value = -5.0;
@@ -131,7 +132,7 @@ void send_Basic()
   basic_buff[basic_index++] = END;
 
   Serial.println("************ALL*************");
-  for (j = 0; j < basic_data_len; j++)
+  for (j = 0; j < basic_buff_len; j++)
   {
     Serial.print("0x");
     Serial.print(basic_buff[j], HEX);
@@ -140,7 +141,7 @@ void send_Basic()
   Serial.println("");
   Serial.println("*************************");
 
-  Serial2.write(basic_buff, basic_data_len);
+  Serial2.write(basic_buff, basic_buff_len);
 
 }
 
@@ -265,6 +266,7 @@ void cell_balance()
   int i = 0, j = 0; //k = 0;
   uint8_t cell_balance_index_crc = 4;
   uint8_t cell_balance_index = 0;
+  int balance_data_len = 4;
   int balance_buff_len = 11;
   uint8_t balance_buff_crc[balance_buff_len];
   uint8_t balance_buff[balance_buff_len];
@@ -336,45 +338,71 @@ void ctrl_status()
   Serial.println("ctrl_status");
   packInfoStruct ctrl_status;
   headerInfoStruct ctrl_status_header = {0,0,0,0};;
+  OnlyheaderStruct headerStart = {0};
 
   int i = 0, j = 0; // k = 0;
-  uint8_t ctrl_status_index = 5;
+  uint8_t ctrl_status_index_crc = 4;
+  uint8_t ctrl_status_index = 0;
+  int status_data_len = 4;
   int status_buff_len = 11;
+  uint8_t status_buff_crc[status_buff_len];
   uint8_t status_buff[status_buff_len];
+  uint8_t crc_ctrl_status = 0;
+
+  headerStart.start = START;
+  ctrl_status_header.srcID = 0x22;
+  ctrl_status_header.snkID = 0x11;
+  ctrl_status_header.cmd = CTRL_STATUS;
+  ctrl_status_header.length = status_data_len;
 
   ctrl_status.segCtrlStatus_1 = 0b10110000; 
   ctrl_status.segCtrlStatus_2 = 0b10101010; 
   ctrl_status.segCtrlStatus_3 = 0b11111111; 
   ctrl_status.segCtrlStatus_4 = 0b01010101; 
 
+  status_buff_crc[ctrl_status_index_crc ++] = ctrl_status.segCtrlStatus_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc ++] = ctrl_status.segCtrlStatus_2 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc ++] = ctrl_status.segCtrlStatus_3 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc ++] = ctrl_status.segCtrlStatus_4 & 0xFF;
+
+  memcpy(status_buff_crc, &ctrl_status_header, 4);
+
+  Serial.println("******RAW*******");
+  for (i = 0 ; i < 8 ; i++)
+  {
+    Serial.print("0x");
+    Serial.print(status_buff_crc[i], HEX);
+    Serial.print(", ");
+  }
+  Serial.println("");
+  Serial.println("************");
+
+  crc_ctrl_status = calculateCRC_8(status_buff_crc, 8);
+
+  /*-------------------------------------------------------------------*/
+
+  status_buff[ctrl_status_index ++] = headerStart.start;
+  status_buff[ctrl_status_index ++] = ctrl_status_header.srcID;
+  status_buff[ctrl_status_index ++] = ctrl_status_header.snkID;
+  status_buff[ctrl_status_index ++] = ctrl_status_header.cmd;
+  status_buff[ctrl_status_index ++] = ctrl_status_header.length;
+
   status_buff[ctrl_status_index ++] = ctrl_status.segCtrlStatus_1 & 0xFF;
   status_buff[ctrl_status_index ++] = ctrl_status.segCtrlStatus_2 & 0xFF;
   status_buff[ctrl_status_index ++] = ctrl_status.segCtrlStatus_3 & 0xFF;
   status_buff[ctrl_status_index ++] = ctrl_status.segCtrlStatus_4 & 0xFF;
 
-  Serial.println("******data*******");
-  for (i = 5 ; i <= 8 ; i++)
-  {
-    Serial.println(status_buff[i], HEX);
-  }
-  Serial.println("************");
-
-  // ctrl_status_header.start = 0x55;
-  ctrl_status_header.srcID = 0x22;
-  ctrl_status_header.snkID = 0x11;
-  ctrl_status_header.cmd = CTRL_STATUS;
-  ctrl_status_header.length = status_buff_len;
-
-  memcpy(status_buff, &ctrl_status_header, 5);
-
-  status_buff[ctrl_status_index++] = calculateCRC(status_buff, sizeof(status_buff));
-  status_buff[ctrl_status_index++] = END;
+  status_buff[ctrl_status_index ++] = crc_ctrl_status;
+  status_buff[ctrl_status_index ++] = END;
 
   Serial.println("*******ALL******");
   for (j = 0 ; j < status_buff_len; j++)
   {
-    Serial.println(status_buff[j], HEX);
+    Serial.print("0x");
+    Serial.print(status_buff[j], HEX);
+    Serial.print(", ");
   }
+  Serial.println("");
   Serial.println("************");
 
   Serial2.write(status_buff, status_buff_len);
@@ -385,18 +413,77 @@ void utilitu_segment()
 {
   Serial.println("ctrl_status");
   packInfoStruct utility_seg;
-  headerInfoStruct utility_seg_header = {0,0,0,0};;
+  headerInfoStruct utility_seg_header = {0,0,0,0};
+  OnlyheaderStruct headerStart = {0};
 
   int i = 0, j = 0, k = 0;
-  int utility_seg_index = 5;
+  int utility_seg_index_crc = 4;
+  int utility_seg_index = 0;
+  int utility_data_len = 26;
   int utility_buff_len = 33;
   uint8_t utility_buff[utility_buff_len];
+  uint8_t utility_buff_crc[utility_buff_len];
+  uint8_t crc_utilitu_segment = 0;
+
+  headerStart.start = START;
+  utility_seg_header.srcID = 0x22;
+  utility_seg_header.snkID = 0x11;
+  utility_seg_header.cmd = UTILITY;
+  utility_seg_header.length = utility_data_len;
 
   utility_seg.currUartB = 1000;
   utility_seg.numChargeCycle = 20345;
   utility_seg.maxTemp = 32;
   utility_seg.minTemp = 15;
   utility_seg.tempSensorSet = 0b10101010;
+  utility_seg.errorCodeReg = 6;
+
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.currUartB >> 8) & 0xFF;
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.currUartB >> 0) & 0xFF;
+
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.numChargeCycle >> 8) & 0xFF;
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.numChargeCycle >> 0) & 0xFF;
+
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.maxTemp >> 8) & 0xFF;
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.maxTemp >> 0) & 0xFF;
+
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.minTemp >> 8) & 0xFF;
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.minTemp >> 0) & 0xFF;
+
+  utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.tempSensorSet >> 0) & 0xFF;
+
+  Serial.print("temp sensor size:");
+  Serial.println(sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]));
+
+  for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]); i++)
+  {
+    utility_seg.tempSensor[i] = 50;
+    utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.tempSensor[i] >> 8) & 0xFF;
+    utility_buff_crc[utility_seg_index_crc ++] = (utility_seg.tempSensor[i] >> 0) & 0xFF;
+  }
+  utility_buff_crc[utility_seg_index_crc++] = (utility_seg.errorCodeReg >> 0) & 0xFF;
+
+  memcpy(utility_buff_crc, &utility_seg_header, 4);
+
+  Serial.println("******RAW*******");
+  for (j = 0 ; j < 30 ; j++)
+  {
+    Serial.print("0x");
+    Serial.print(utility_buff_crc[j], HEX);
+    Serial.print(", ");
+  }
+  Serial.println("");
+  Serial.println("************");
+
+  crc_utilitu_segment = calculateCRC_8(utility_buff_crc, 26);
+
+  /*-------------------------------------------------------------------------*/
+
+  utility_buff[utility_seg_index++] = headerStart.start;
+  utility_buff[utility_seg_index++] = utility_seg_header.srcID;
+  utility_buff[utility_seg_index++] = utility_seg_header.snkID;
+  utility_buff[utility_seg_index++] = utility_seg_header.cmd;
+  utility_buff[utility_seg_index++] = utility_seg_header.length;
 
   utility_buff[utility_seg_index++] = (utility_seg.currUartB >> 8) & 0xFF;
   utility_buff[utility_seg_index++] = (utility_seg.currUartB >> 0) & 0xFF;
@@ -412,44 +499,26 @@ void utilitu_segment()
 
   utility_buff[utility_seg_index++] = (utility_seg.tempSensorSet >> 0) & 0xFF;
 
-//  for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]) ; i++)
-for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]); i++)
-  {
-    utility_seg.tempSensor[i] = 50;
-    utility_buff[utility_seg_index++] = (utility_seg.tempSensor[i] >> 8) & 0xFF;
-    Serial.println("******c*******");
-    Serial.println(utility_seg_index);
-    utility_buff[utility_seg_index++] = (utility_seg.tempSensor[i] >> 0) & 0xFF;
-    Serial.println("******d*******");
-    Serial.println(utility_seg_index);
-  }
+  for (i = 0 ; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]); i++)
+    {
+      utility_seg.tempSensor[i] = 50;
+      utility_buff[utility_seg_index++] = (utility_seg.tempSensor[i] >> 8) & 0xFF;
+      utility_buff[utility_seg_index++] = (utility_seg.tempSensor[i] >> 0) & 0xFF;
+    }
   
-  utility_seg.errorCodeReg = 6;
   utility_buff[utility_seg_index++] = (utility_seg.errorCodeReg >> 0) & 0xFF;
 
-  Serial.println("******data*******");
-  for (j = 5 ; j < 31 ; j++)
-  {
-    Serial.println(utility_buff[j], HEX);
-  }
-  Serial.println("************");
-
-  // utility_seg_header.start = 0x55;
-  utility_seg_header.srcID = 0x22;
-  utility_seg_header.snkID = 0x11;
-  utility_seg_header.cmd = UTILITY;
-  utility_seg_header.length = utility_buff_len;
-
-  memcpy(utility_buff, &utility_seg_header, 5);
-
-  utility_buff[utility_seg_index++] = calculateCRC(utility_buff, sizeof(utility_buff));
+  utility_buff[utility_seg_index++] = crc_utilitu_segment;
   utility_buff[utility_seg_index++] = END;
 
   Serial.println("******ALL*******");
   for (k = 0 ; k < utility_buff_len; k++)
   {
-    Serial.println(utility_buff[k], HEX);
+    Serial.print("0x");
+    Serial.print(utility_buff[k], HEX);
+    Serial.print(", ");
   }
+  Serial.println("");
   Serial.println("************");
 
   Serial2.write(utility_buff, utility_buff_len);
