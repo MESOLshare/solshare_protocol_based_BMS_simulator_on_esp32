@@ -56,6 +56,7 @@ void result_packet(uint8_t cmd, int data)
   Serial.println("*************************");
 
   Serial2.write(buff, data_len);
+  
 
 }
 
