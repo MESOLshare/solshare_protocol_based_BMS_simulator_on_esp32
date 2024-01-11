@@ -13,7 +13,7 @@ UART voltage:		12V
 #define END 0xAA
 
 // read info
-#define LEN_READ 9  // max 12
+#define LEN_READ 10  // max 12
 #define BASIC_INFO 0xA1
 #define CELL_INFO 0xA2
 #define CELL_BALANCE 0xA3
@@ -74,6 +74,12 @@ UART voltage:		12V
 
 uint8_t i = 0;
 bool startByte = false;
+uint8_t responce[LEN_READ];
+uint8_t rx_buff_crc[255];
+// uint8_t rx_buff_rcrc[255];
+uint8_t rx_data_len;
+uint8_t rx_crc;
+uint8_t rx_rcrc;
 
 typedef struct packInfoStruct {
   uint8_t numOfCells;
@@ -135,7 +141,6 @@ bool get_bytes(uint8_t *t_outMessage) {
 
   // while (i < LEN_READ - 1) {
   if (Serial2.available() > 0) {
-    // uint8_t thisByte = m_port->read();
     uint8_t thisByte = Serial2.read();
     Serial.println(thisByte, HEX);
     if (thisByte == START)  // START
@@ -152,9 +157,7 @@ bool get_bytes(uint8_t *t_outMessage) {
       }
       i++;
     }
-    // }
-  }
-  else return false;
+  } else return false;
 }
 
 uint8_t rand_SOC() {
@@ -188,8 +191,6 @@ pxRes_dischargeStart/stop reply:
 void loop() {
   // put your main code here, to run repeatedly:
 
-
-  static uint8_t responce[LEN_READ];
   if (get_bytes(responce)) {
     Serial.println("BMS data:");
     for (int i = 0; i < LEN_READ; i++) {
@@ -198,83 +199,118 @@ void loop() {
       Serial.print("--");
     }
     Serial.println();
+    rx_crc = 0;
+    rx_rcrc = 0;
 
-    switch (responce[3]) {
-      case BASIC_INFO:
-        Serial.println("BASIC_INFO");
-        send_Basic();
-        break;
+    rx_data_len = responce[4];
+    Serial.print("**rx_data_len: ") + Serial.println(rx_data_len);
 
-      case CELL_INFO:
-        Serial.println("CELL_INFO");
-        cell_info();
-        break;
+    for (int n = 1; n < rx_data_len + 5; n++) {
+      rx_buff_crc[n - 1] = responce[n];
+      Serial.print("rx_buff_crc: ") + Serial.println(rx_buff_crc[n - 1], HEX);
+    }
 
-      case CELL_BALANCE:
-        Serial.println("CELL_BALANCE");
-        cell_balance();
-        break;
+    rx_rcrc = responce[rx_data_len + 5];
+    Serial.print("--rx_rcrc: ") + Serial.println(rx_rcrc, HEX);
 
-      case CTRL_STATUS:
-        Serial.println("CTRL_STATUS");
-        ctrl_status();
-        break;
+    rx_crc = calculateCRC_8(rx_buff_crc, rx_data_len + 4);
+    Serial.print("++rx_crc: ") + Serial.println(rx_crc, HEX);
 
-      case UTILITY:
-        Serial.println("UTILITY");
-        utilitu_segment();
-        break;
+    if (rx_crc == rx_rcrc)
+    {
+      switch (responce[3]) 
+      {
+        case BASIC_INFO:
 
-      case MOS_CTRL:
-        mosCtrl();
-        break;
-      case NNCAP_CONFIG:
-        nominal_cap();
-        break;
-      case CYCAP_CONFIG:
-        cyclic_cap();
-        break;
-      case FULL_CELL_VOLT:
-        full_cell_volt();
-        break;
-      case END_CELL_VOLT:
-        cell_end_volt();
-        break;
-      case TEMP_CTRL:
-        temp_CTRL();
-        break;
+          // rx_crc = calculateCRC_8(rx_buff_crc, 4);
+          // Serial.print("++rx_crc: ") +
+          // Serial.println(rx_crc, HEX);
 
-      case COMM_CMD:
+          // if (rx_crc == rx_rcrc)
+          // {
+          Serial.println("BASIC_INFO");
+          send_Basic();
+          // }
+          break;
 
-        if (responce[5] == TS_UNIX) { unix_ts(); }
-        if (responce[5] == TIME_TO_SLEEP) { time_before_sleep(); }
-        if (responce[5] == CURR_UART_B) { current_uart_b(); }
-        if (responce[5] == CELL_OVP) { cell_OVP(); }
-        if (responce[5] == CELL_OVPD) { cell_OVPD(); }
-        if (responce[5] == CELL_UVP) { cell_UVP(); }
-        if (responce[5] == CELL_UVPD) { cell_UVPD(); }
-        if (responce[5] == PACK_OVP) { pack_OVP(); }
-        if (responce[5] == PACK_OVPD) { pack_OVPD(); }
-        if (responce[5] == PACK_UVP) { pack_UVP(); }
-        if (responce[5] == PACK_UVPD) { pack_UVPD(); }
-        if (responce[5] == CRG_OCP) { crg_OCP(); }
-        if (responce[5] == CRG_OCPD) { crg_OCPD(); }
-        if (responce[5] == CRG_OCPRD) { crg_OCPRD(); }
-        if (responce[5] == DSCRG_OCP) { dscrg_OCP(); }
-        if (responce[5] == DSCRG_OCPD) { dscrg_OCPD(); }
-        if (responce[5] == DSCRG_OCPRD) { dscrg_OCPRD(); }
-        if (responce[5] == CRG_OTP) { crg_OTP(); }
-        if (responce[5] == CRG_OTPD) { crg_OTPD(); }
-        if (responce[5] == CRG_OTPRD) { crg_OTPRD(); }
-        if (responce[5] == CRG_UTP) { crg_UTP(); }
-        if (responce[5] == CRG_UTPD) { crg_UTPD(); }
-        if (responce[5] == CRG_UTPRD) { crg_UTPRD(); }
-        if (responce[5] == DSCRG_OTP) { dscrg_OTP(); }
-        if (responce[5] == DSCRG_OTPD) { dscrg_OTPD(); }
-        if (responce[5] == DSCRG_OTPRD) { dscrg_OTPRD(); }
-        if (responce[5] == DSCRG_UTP) { dscrg_UTP(); }
-        if (responce[5] == DSCRG_UTPD) { dscrg_UTPD(); }
-        if (responce[5] == DSCRG_UTPRD) { dscrg_UTPRD(); }
+        case CELL_INFO:
+
+          Serial.println("CELL_INFO");
+          cell_info();
+          
+          break;
+
+        case CELL_BALANCE:
+
+          Serial.println("CELL_BALANCE");
+          cell_balance();
+          break;
+
+        case CTRL_STATUS:
+
+          Serial.println("CTRL_STATUS");
+          ctrl_status();
+          
+          break;
+
+        case UTILITY:
+
+          Serial.println("UTILITY");
+          utilitu_segment();
+          break;
+
+        case MOS_CTRL:
+
+          mosCtrl();
+          break;
+        case NNCAP_CONFIG:
+          nominal_cap();
+          break;
+        case CYCAP_CONFIG:
+          cyclic_cap();
+          break;
+        case FULL_CELL_VOLT:
+          full_cell_volt();
+          break;
+        case END_CELL_VOLT:
+          cell_end_volt();
+          break;
+        case TEMP_CTRL:
+          temp_CTRL();
+          break;
+
+        case COMM_CMD:
+
+          if (responce[5] == TS_UNIX) { unix_ts(); }
+          if (responce[5] == TIME_TO_SLEEP) { time_before_sleep(); }
+          if (responce[5] == CURR_UART_B) { current_uart_b(); }
+          if (responce[5] == CELL_OVP) { cell_OVP(); }
+          if (responce[5] == CELL_OVPD) { cell_OVPD(); }
+          if (responce[5] == CELL_UVP) { cell_UVP(); }
+          if (responce[5] == CELL_UVPD) { cell_UVPD(); }
+          if (responce[5] == PACK_OVP) { pack_OVP(); }
+          if (responce[5] == PACK_OVPD) { pack_OVPD(); }
+          if (responce[5] == PACK_UVP) { pack_UVP(); }
+          if (responce[5] == PACK_UVPD) { pack_UVPD(); }
+          if (responce[5] == CRG_OCP) { crg_OCP(); }
+          if (responce[5] == CRG_OCPD) { crg_OCPD(); }
+          if (responce[5] == CRG_OCPRD) { crg_OCPRD(); }
+          if (responce[5] == DSCRG_OCP) { dscrg_OCP(); }
+          if (responce[5] == DSCRG_OCPD) { dscrg_OCPD(); }
+          if (responce[5] == DSCRG_OCPRD) { dscrg_OCPRD(); }
+          if (responce[5] == CRG_OTP) { crg_OTP(); }
+          if (responce[5] == CRG_OTPD) { crg_OTPD(); }
+          if (responce[5] == CRG_OTPRD) { crg_OTPRD(); }
+          if (responce[5] == CRG_UTP) { crg_UTP(); }
+          if (responce[5] == CRG_UTPD) { crg_UTPD(); }
+          if (responce[5] == CRG_UTPRD) { crg_UTPRD(); }
+          if (responce[5] == DSCRG_OTP) { dscrg_OTP(); }
+          if (responce[5] == DSCRG_OTPD) { dscrg_OTPD(); }
+          if (responce[5] == DSCRG_OTPRD) { dscrg_OTPRD(); }
+          if (responce[5] == DSCRG_UTP) { dscrg_UTP(); }
+          if (responce[5] == DSCRG_UTPD) { dscrg_UTPD(); }
+          if (responce[5] == DSCRG_UTPRD) { dscrg_UTPRD(); }
+      }
     }
   }
 }
