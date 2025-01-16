@@ -70,7 +70,7 @@ void mosCtrl()
 void nominal_cap()
 {
   Serial.println("nominal_cap");
-  int response_data = 0x00;
+  int response_data = 0xFF;
   result_packet(NNCAP_CONFIG, response_data);
 }
 
@@ -95,12 +95,27 @@ void cell_end_volt()
   result_packet(END_CELL_VOLT, response_data);
 }
 
+void reset_CTRL()
+{
+  Serial.println("reset_CTRL");
+  int response_data = 0x00;
+  result_packet(RST_CTRL, response_data);
+}
+
+void heart_beat()
+{
+  Serial.println("heart_beat");
+  int response_data = 0x00;
+  result_packet(HRT_BEAT, response_data);
+}
+
 void temp_CTRL()
 {
   Serial.println("temp_CTRL");
   int response_data = 0x00;
   result_packet(TEMP_CTRL, response_data);
 }
+
 
 // void result_packet_node(uint8_t cmd, uint8_t node, int data)
 // {

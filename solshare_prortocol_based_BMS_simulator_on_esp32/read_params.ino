@@ -149,12 +149,11 @@ void cell_info() {
   Serial.println("cell info");
   packInfoStruct cell_info;
   headerInfoStruct cell_info_header = { 0, 0, 0, 0 };
-  ;
   OnlyheaderStruct headerStart = { 0 };
   uint8_t crc8_cell_info;
 
   int i = 0, j = 0, k = 0;
-  uint8_t cell_info_index_crc = 4;
+  uint8_t cell_info_index_crc = 0;
   uint8_t cell_info_index = 0;
   int cell_buff_len = 54;
   int cell_buff_data_len = 47;
@@ -171,6 +170,11 @@ void cell_info() {
   cell_info.cellHigh = 4200;
   cell_info.cellLow = 2700;
   cell_info.cellAvg = 3500;
+
+  cell_buff_crc[cell_info_index_crc++] = cell_info_header.srcID;
+  cell_buff_crc[cell_info_index_crc++] = cell_info_header.snkID;
+  cell_buff_crc[cell_info_index_crc++] = cell_info_header.cmd;
+  cell_buff_crc[cell_info_index_crc++] = cell_info_header.length;
 
   cell_buff_crc[cell_info_index_crc++] = (cell_info.numOfCells >> 0) & 0xFF;
 
@@ -189,10 +193,10 @@ void cell_info() {
     cell_buff_crc[cell_info_index_crc++] = (cell_info.cellVoltage[i] >> 0) & 0xFF;
   }
 
-  memcpy(cell_buff_crc, &cell_info_header, 5);
+  // memcpy(cell_buff_crc, &cell_info_header, 4);
 
   Serial.println("*************RAW************");
-  for (j = 0; j < 47; j++) {
+  for (j = 0; j < 50; j++) {
     Serial.print("0x");
     Serial.print(cell_buff_crc[j], HEX);
     Serial.print(", ");
@@ -200,7 +204,7 @@ void cell_info() {
   Serial.print("");
   Serial.println("*************************");
 
-  crc8_cell_info = calculateCRC_8(cell_buff_crc, 47);
+  crc8_cell_info = calculateCRC_8(cell_buff_crc, 51);
 
   Serial.print("** CRC **: ");
   Serial.println(crc8_cell_info, HEX);
@@ -241,7 +245,7 @@ void cell_info() {
   cell_buff[cell_info_index++] = END;
 
   Serial.println("*************ALL************");
-  for (j = 0; j < 47; j++) {
+  for (j = 0; j < 54; j++) {
     Serial.print("0x");
     Serial.print(cell_buff[j], HEX);
     Serial.print(", ");
@@ -336,8 +340,8 @@ void ctrl_status() {
   int i = 0, j = 0;  // k = 0;
   uint8_t ctrl_status_index_crc = 4;
   uint8_t ctrl_status_index = 0;
-  int status_data_len = 4;
-  int status_buff_len = 11;
+  int status_data_len = 12;
+  int status_buff_len = 19;
   uint8_t status_buff_crc[status_buff_len];
   uint8_t status_buff[status_buff_len];
   uint8_t crc_ctrl_status = 0;
@@ -350,18 +354,34 @@ void ctrl_status() {
 
   ctrl_status.segCtrlStatus_1 = 0b10110000;
   ctrl_status.segCtrlStatus_2 = 0b10101010;
-  ctrl_status.segCtrlStatus_3 = 0b11111111;
-  ctrl_status.segCtrlStatus_4 = 0b01010101;
+  ctrl_status.segCtrlStatus_3_1 = 0b10110000;
+  ctrl_status.segCtrlStatus_3_2 = 0b10101010;
+  ctrl_status.segCtrlStatus_4_1 = 0b10110000;
+  ctrl_status.segCtrlStatus_4_2 = 0b10101010;
+  ctrl_status.segCtrlStatus_5_1 = 0b10110000;
+  ctrl_status.segCtrlStatus_5_2 = 0b10101010;
+  ctrl_status.segCtrlStatus_6_1 = 0b10110000;
+  ctrl_status.segCtrlStatus_6_2 = 0b10101010;
+  ctrl_status.segCtrlStatus_7_1 = 0b10110000;
+  ctrl_status.segCtrlStatus_7_2 = 0b10101010;
 
   status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_1 & 0xFF;
   status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_2 & 0xFF;
-  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_3 & 0xFF;
-  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_4 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_3_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_3_2 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_4_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_4_2 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_5_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_5_2 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_6_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_6_2 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_7_1 & 0xFF;
+  status_buff_crc[ctrl_status_index_crc++] = ctrl_status.segCtrlStatus_7_2 & 0xFF;
 
   memcpy(status_buff_crc, &ctrl_status_header, 4);
 
   Serial.println("******RAW*******");
-  for (i = 0; i < 8; i++) {
+  for (i = 0; i < 12; i++) {
     Serial.print("0x");
     Serial.print(status_buff_crc[i], HEX);
     Serial.print(", ");
@@ -369,7 +389,7 @@ void ctrl_status() {
   Serial.println("");
   Serial.println("************");
 
-  crc_ctrl_status = calculateCRC_8(status_buff_crc, 8);
+  crc_ctrl_status = calculateCRC_8(status_buff_crc, 16);
 
   /*-------------------------------------------------------------------*/
 
@@ -381,8 +401,16 @@ void ctrl_status() {
 
   status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_1 & 0xFF;
   status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_2 & 0xFF;
-  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_3 & 0xFF;
-  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_4 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_3_1 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_3_2 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_4_1 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_4_2 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_5_1 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_5_2 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_6_1 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_6_2 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_7_1 & 0xFF;
+  status_buff[ctrl_status_index++] = ctrl_status.segCtrlStatus_7_2 & 0xFF;
 
   status_buff[ctrl_status_index++] = crc_ctrl_status;
   status_buff[ctrl_status_index++] = END;
@@ -444,7 +472,7 @@ void utilitu_segment() {
   Serial.print("temp sensor size:");
   Serial.println(sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]));
 
-  for (i = 0; i < sizeof(utility_seg.tempSensor) / sizeof(utility_seg.tempSensor[0]); i++) {
+  for (i = 0; i < 8; i++) {
     utility_seg.tempSensor[i] = 50;
     utility_buff_crc[utility_seg_index_crc++] = (utility_seg.tempSensor[i] >> 8) & 0xFF;
     utility_buff_crc[utility_seg_index_crc++] = (utility_seg.tempSensor[i] >> 0) & 0xFF;
@@ -462,7 +490,7 @@ void utilitu_segment() {
   Serial.println("");
   Serial.println("************");
 
-  crc_utilitu_segment = calculateCRC_8(utility_buff_crc, 26);
+  crc_utilitu_segment = calculateCRC_8(utility_buff_crc, 30);
 
   /*-------------------------------------------------------------------------*/
 
