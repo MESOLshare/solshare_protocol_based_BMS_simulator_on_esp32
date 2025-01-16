@@ -13,7 +13,7 @@ UART voltage:		12V
 #define END 0xAA
 
 // read info
-#define LEN_READ 10  // max 12
+#define LEN_READ 12  // max 12
 #define BASIC_INFO 0xA1
 #define CELL_INFO 0xA2
 #define CELL_BALANCE 0xA3
@@ -26,7 +26,10 @@ UART voltage:		12V
 #define CYCAP_CONFIG 0xB3
 #define FULL_CELL_VOLT 0xB4
 #define END_CELL_VOLT 0xB5
-#define TEMP_CTRL 0xB6
+#define RST_CTRL 0xB6
+#define HRT_BEAT 0xB7
+#define TEMP_CTRL 0xB8
+
 
 #define COMM_CMD 0xBB
 
@@ -101,8 +104,16 @@ typedef struct packInfoStruct {
   uint8_t cellString_4;
   uint8_t segCtrlStatus_1;
   uint8_t segCtrlStatus_2;
-  uint8_t segCtrlStatus_3;
-  uint8_t segCtrlStatus_4;
+  uint8_t segCtrlStatus_3_1;
+  uint8_t segCtrlStatus_3_2;
+  uint8_t segCtrlStatus_4_1;
+  uint8_t segCtrlStatus_4_2;
+  uint8_t segCtrlStatus_5_1;
+  uint8_t segCtrlStatus_5_2;
+  uint8_t segCtrlStatus_6_1;
+  uint8_t segCtrlStatus_6_2;
+  uint8_t segCtrlStatus_7_1;
+  uint8_t segCtrlStatus_7_2;
   uint16_t currUartB;
   uint16_t numChargeCycle;
   uint16_t maxTemp;
@@ -132,7 +143,8 @@ typedef struct OnlyheaderStruct {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);                         // console
-  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);  // Dongle
+  // Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);  // Dongle
+  Serial2.begin(9600);  // Dongle
 
   Serial.println("Init");
 }
@@ -140,7 +152,7 @@ void setup() {
 bool get_bytes(uint8_t *t_outMessage) {
 
   // while (i < LEN_READ - 1) {
-  if (Serial2.available() > 0) {
+  if (Serial2.available()>0) {
     uint8_t thisByte = Serial2.read();
     Serial.println(thisByte, HEX);
     if (thisByte == START)  // START
@@ -274,6 +286,12 @@ void loop() {
           break;
         case END_CELL_VOLT:
           cell_end_volt();
+          break;
+        case RST_CTRL:
+          reset_CTRL();
+          break;
+        case HRT_BEAT:
+          heart_beat();
           break;
         case TEMP_CTRL:
           temp_CTRL();
